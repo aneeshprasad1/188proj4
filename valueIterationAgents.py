@@ -57,18 +57,21 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
         for i in range(iterations):
             state = states[i%len(states)]
             if not mdp.isTerminal(state):
-                reward = mdp.getReward(state)
-                discounted = discount*self.values[state]
+                reward = mdp.getReward(state)                
                 actions = mdp.getPossibleActions(state)
-                new_vals = []
+                EUActions = []
                 for action in actions:
+                    EUAction = 0
                     transitions = mdp.getTransitionStatesAndProbs(state, action)
-                    summed = 0
-                for transition in transitions:
-                    summed += transition[1]*(reward + discounted)
-                    new_vals.append(summed)
-                if new_vals != []:
-                    self.values[state] = max(new_vals)
+                    for transition in transitions:
+                        transitionState = transition[0]
+                        transitionUtility = self.values[transitionState]
+                        transitionProbability = transition[1]
+                        EUAction += transitionUtility*transitionProbability
+                    EUActions.append(EUAction)
+                maxEU = max(EUActions)
+                updatedUtility = reward + discount*maxEU
+                self.values[state] = updatedUtility
                 
 
     def getValue(self, state):
@@ -83,12 +86,17 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
           value function stored in self.values.
         """
         "*** YOUR CODE HERE ***"
+        EUState = 0
+        reward = self.mdp.getReward(state)
         transitions = self.mdp.getTransitionStatesAndProbs(state, action)
-        expected = 0
         for transition in transitions:
-            expected_state = transition[0]
-            expected += transition[1]*self.values[state]
-        return expected
+            transitionState = transition[0]
+            transitionUtility = self.values[transitionState]
+            transitionProbability = transition[1]
+            #EUTransition = transitionProbability*(reward + self.discount*transitionUtility)
+            EUTransition = transitionProbability*transitionUtility
+            EUState += EUTransition
+        return reward + self.discount*EUState
 
     def computeActionFromValues(self, state):
         """
@@ -100,21 +108,15 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
           terminal state, you should return None.
         """
         "*** YOUR CODE HERE ***"
-
-        curr_val = self.values[state]
         actions = self.mdp.getPossibleActions(state)
-        expected_util = {}
+        if actions == ():
+            return
+        EUActions = {}
         for action in actions:
-            transitions = self.mdp.getTransitionStatesAndProbs(state, action)
-            expected = 0
-            for transition in transitions:
-                expected_state = transition[0]
-                expected += transition[1]*self.values[expected_state]
-            expected_util[action] = expected
+            EUAction = self.computeQValueFromValues(state, action)
+            EUActions[action] = EUAction
 
-        if actions != ():
-            return max(expected_util, key=expected_util.get)
-        return
+        return max(EUActions, key=EUActions.get)
 
     def getPolicy(self, state):
         return self.computeActionFromValues(state)
