@@ -18,6 +18,8 @@ from learningAgents import ValueEstimationAgent
 import collections
 import time
 
+import pdb
+
 class AsynchronousValueIterationAgent(ValueEstimationAgent):
     """
         * Please read learningAgents.py before reading this.*
@@ -52,6 +54,21 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
             self.values[state] = 0
 
         "*** YOUR CODE HERE ***"
+        for i in range(iterations):
+            for state in states:
+                reward = mdp.getReward(state)
+                discounted = discount*self.values[state]
+                actions = mdp.getPossibleActions(state)
+                new_vals = []
+                for action in actions:
+                    transitions = mdp.getTransitionStatesAndProbs(state, action)
+                    summed = 0
+                    for transition in transitions:
+                        summed += transition[1]*(reward + discounted)
+                    new_vals.append(summed)
+                if new_vals != []:
+                    self.values[state] = max(new_vals)
+                
 
     def getValue(self, state):
         """
@@ -65,7 +82,13 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
           value function stored in self.values.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        transitions = self.mdp.getTransitionStatesAndProbs(state, action)
+        expected = 0
+        pdb.set_trace()
+        for transition in transitions:
+            expected_state = transition[0]
+            expected += transition[1]*self.values[expected_state]
+        return expected
 
     def computeActionFromValues(self, state):
         """
@@ -77,7 +100,20 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
           terminal state, you should return None.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        curr_val = self.values[state]
+        actions = self.mdp.getPossibleActions(state)
+        expected_util = {}
+        for action in actions:
+            transitions = self.mdp.getTransitionStatesAndProbs(state, action)
+            expected = 0
+            for transition in transitions:
+                expected_state = transition[0]
+                expected += transition[1]*self.values[expected_state]
+            expected_util[action] = expected
+
+        if actions != ():
+            return max(expected_util, key=expected_util.get)
+        return
 
     def getPolicy(self, state):
         return self.computeActionFromValues(state)
