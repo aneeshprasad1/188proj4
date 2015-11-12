@@ -55,7 +55,8 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
 
         "*** YOUR CODE HERE ***"
         for i in range(iterations):
-            for state in states:
+            state = states[i%len(states)]
+            if not mdp.isTerminal(state):
                 reward = mdp.getReward(state)
                 discounted = discount*self.values[state]
                 actions = mdp.getPossibleActions(state)
@@ -63,8 +64,8 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
                 for action in actions:
                     transitions = mdp.getTransitionStatesAndProbs(state, action)
                     summed = 0
-                    for transition in transitions:
-                        summed += transition[1]*(reward + discounted)
+                for transition in transitions:
+                    summed += transition[1]*(reward + discounted)
                     new_vals.append(summed)
                 if new_vals != []:
                     self.values[state] = max(new_vals)
@@ -84,10 +85,9 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
         "*** YOUR CODE HERE ***"
         transitions = self.mdp.getTransitionStatesAndProbs(state, action)
         expected = 0
-        pdb.set_trace()
         for transition in transitions:
             expected_state = transition[0]
-            expected += transition[1]*self.values[expected_state]
+            expected += transition[1]*self.values[state]
         return expected
 
     def computeActionFromValues(self, state):
@@ -100,6 +100,7 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
           terminal state, you should return None.
         """
         "*** YOUR CODE HERE ***"
+
         curr_val = self.values[state]
         actions = self.mdp.getPossibleActions(state)
         expected_util = {}
