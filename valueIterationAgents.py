@@ -19,7 +19,7 @@ import collections
 import time
 
 import pdb
-
+import numpy as np
 class AsynchronousValueIterationAgent(ValueEstimationAgent):
     """
         * Please read learningAgents.py before reading this.*
@@ -55,6 +55,7 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
 
         "*** YOUR CODE HERE ***"
         for i in range(iterations):
+            start = time.time()
             state = states[i%len(states)]
             if not mdp.isTerminal(state):
                 reward = mdp.getReward(state)                
@@ -72,7 +73,9 @@ class AsynchronousValueIterationAgent(ValueEstimationAgent):
                 maxEU = max(EUActions)
                 updatedUtility = reward + discount*maxEU
                 self.values[state] = updatedUtility
-                
+            print('Iteration: ' + str(i))
+            print(sum(abs(value - 100) for state, value in self.values.items() if not self.mdp.isTerminal(state)))
+            print('Time elapsed: ' + str(time.time()-start))
 
     def getValue(self, state):
         """
@@ -152,3 +155,56 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
             self.values[state] = 0
 
         "*** YOUR CODE HERE ***"
+        # Compute predecessors of all states
+        predecessors = {state: [] for state in states}
+        for state in states:
+            actions = self.mdp.getPossibleActions(state)
+            for action in actions:
+                transitions = self.mdp.getTransitionStatesAndProbs(state, action)
+                for transition in transitions:
+                    transitionState = transition[0]
+                    transitionProb = transition[1]
+                    if transitionProb > 0:
+                        predecessors[transitionState].append(state)
+
+        q = util.PriorityQueue()
+        for state in states:
+            if not self.mdp.isTerminal(state):
+                actions = self.mdp.getPossibleActions(state)
+                curr = self.values[state]
+                qValues = [self.computeQValueFromValues(state, action) for action in actions]
+                highQ = max(qValues)
+                diff = abs(curr - highQ)
+                q.update(state, -diff)
+
+        times = []
+        for i in range(iterations):
+            #print(sum(abs(value - 100) for state, value in self.values.items() if not self.mdp.isTerminal(state)))
+            start = time.time()
+            if q.isEmpty():
+                return
+            s = q.pop()
+            if not self.mdp.isTerminal(state):
+                # update state
+                actions = mdp.getPossibleActions(s)
+                qValues = [self.computeQValueFromValues(s, action) for action in actions]
+                highQ = max(qValues)
+                self.values[s] = highQ
+                
+                for p in predecessors[s]:
+                    actions = self.mdp.getPossibleActions(p)
+                    curr = self.values[p]
+                    qValues = [self.computeQValueFromValues(p, action) for action in actions]
+                    highQ = max(qValues)
+                    diff = abs(curr - highQ)
+                    if diff > theta:
+                        q.update(p, -diff)
+            print('Iteration: ' + str(i))
+            print(sum(abs(value - 100) for state, value in self.values.items() if not self.mdp.isTerminal(state)))
+            elapsed = time.time()-start
+            print('Time elapsed: ' + str(elapsed))
+        
+
+
+
+

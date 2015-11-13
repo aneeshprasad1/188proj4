@@ -14,6 +14,7 @@
 
 import mdp, util
 import numpy as np
+import pdb
 
 from learningAgents import ValueEstimationAgent
 
@@ -65,12 +66,56 @@ class PolicyIterationAgent(ValueEstimationAgent):
         """ Run policy evaluation to get the state values under self.policy. Should update self.policyValues.
         Implement this by solving a linear system of equations using numpy. """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        states = self.mdp.getStates()
+        numStates = len(states)
+
+        T = np.zeros((numStates, numStates))
+        R = np.zeros(numStates)
+        stateOrder = {}
+        ind = 0
+        for state in states:
+            stateOrder[state] = ind
+            ind += 1
+
+        for state in states:
+            if not self.mdp.isTerminal(state):
+                actions = self.mdp.getPossibleActions(state)
+                reward = self.mdp.getReward(state)
+                i = stateOrder[state]
+                R[i] = reward                
+                action = self.policy[state]
+                transitions = self.mdp.getTransitionStatesAndProbs(state, action)
+                for transition in transitions:
+                    transitionState = transition[0]
+                    transitionProb = transition[1]
+                    j = stateOrder[transitionState]
+                    T[i][j] = transitionProb
+                    
+        I = np.eye(numStates)
+        A = I - self.discount*T
+        V = np.linalg.solve(A, R)
+        for state in states:
+            ind = stateOrder[state]
+            self.policyValues[state] = V[ind]
+
 
     def runPolicyImprovement(self):
         """ Run policy improvement using self.policyValues. Should update self.policy. """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        states = self.mdp.getStates()
+        for state in states:
+            if not self.mdp.isTerminal(state):
+                actions = self.mdp.getPossibleActions(state)
+                if actions != ():
+                    EUActions = {}
+                    for action in actions:
+                        EUAction = self.computeQValueFromValues(state, action)
+                        EUActions[action] = EUAction
+                    self.policy[state] = max(EUActions, key=EUActions.get)
+                else:
+                    self.policy[state] = None
+            else:
+                self.policy[state] = None
 
     def computeQValueFromValues(self, state, action):
         """
@@ -78,7 +123,18 @@ class PolicyIterationAgent(ValueEstimationAgent):
           value function stored in self.policyValues.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        EUState = 0
+        reward = self.mdp.getReward(state)
+        transitions = self.mdp.getTransitionStatesAndProbs(state, action)
+        for transition in transitions:
+            transitionState = transition[0]
+            transitionUtility = self.policyValues[transitionState]
+            transitionProbability = transition[1]
+            #EUTransition = transitionProbability*(reward + self.discount*transitionUtility)
+            EUTransition = transitionProbability*transitionUtility
+            EUState += EUTransition
+        return reward + self.discount*EUState
+
 
     def getValue(self, state):
         return self.policyValues[state]
